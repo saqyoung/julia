@@ -3,15 +3,13 @@
 module REPL
 
 using Base.Meta
-using ..Terminals
-using ..LineEdit
-using ..REPLCompletions
 
 export
     AbstractREPL,
     BasicREPL,
     LineEditREPL,
-    StreamREPL
+    StreamREPL,
+    atreplinit
 
 import Base:
     AbstractDisplay,
@@ -20,6 +18,12 @@ import Base:
     AnyDict,
     ==
 
+
+include("Terminals.jl")
+using .Terminals
+
+include("LineEdit.jl")
+using .LineEdit
 import ..LineEdit:
     CompletionProvider,
     HistoryProvider,
@@ -35,6 +39,38 @@ import ..LineEdit:
     accept_result,
     terminal,
     MIState
+
+include("REPLCompletions.jl")
+using .REPLCompletions
+
+
+const repl_hooks = []
+
+"""
+    atreplinit(f)
+
+Register a one-argument function to be called before the REPL interface is initialized in
+interactive sessions; this is useful to customize the interface. The argument of `f` is the
+REPL object. This function should be called from within the `.juliarc.jl` initialization
+file.
+"""
+atreplinit(f::Function) = (pushfirst!(repl_hooks, f); nothing)
+
+function __atreplinit(repl)
+    for f in repl_hooks
+        try
+            f(repl)
+        catch err
+            showerror(STDERR, err)
+            println(STDERR)
+        end
+    end
+end
+_atreplinit(repl) = Base.invokelatest(__atreplinit, repl)
+
+function __init__()
+    Base.REPLREF[] = REPL
+end
 
 abstract type AbstractREPL end
 
@@ -103,17 +139,6 @@ function start_repl_backend(repl_channel::Channel, response_channel::Channel)
     end
     backend
 end
-
-function ip_matches_func(ip, func::Symbol)
-    for fr in StackTraces.lookup(ip)
-        if fr === StackTraces.UNKNOWN || fr.from_c
-            return false
-        end
-        fr.func === func && return true
-    end
-    return false
-end
-
 struct REPLDisplay{R<:AbstractREPL} <: AbstractDisplay
     repl::R
 end
@@ -1137,5 +1162,8 @@ function start_repl_server(port::Int)
         run_repl(client)
     end
 end
+
+include("precompile.jl")
+_precompile_()
 
 end # module

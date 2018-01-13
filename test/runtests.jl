@@ -2,6 +2,7 @@
 
 using Test
 using Distributed
+import REPL
 using Base.Printf: @sprintf
 
 include("choosetests.jl")
@@ -101,9 +102,9 @@ cd(dirname(@__FILE__)) do
             t = current_task()
             # Monitor STDIN and kill this task on ^C
             stdin_monitor = @async begin
-                term = Base.Terminals.TTYTerminal("xterm", STDIN, STDOUT, STDERR)
+                term = REPL.Terminals.TTYTerminal("xterm", STDIN, STDOUT, STDERR)
                 try
-                    Base.Terminals.raw!(term, true)
+                    REPL.Terminals.raw!(term, true)
                     while true
                         if read(term, Char) == '\x3'
                             Base.throwto(t, InterruptException())
@@ -113,7 +114,7 @@ cd(dirname(@__FILE__)) do
                 catch e
                     isa(e, InterruptException) || rethrow(e)
                 finally
-                    Base.Terminals.raw!(term, false)
+                    REPL.Terminals.raw!(term, false)
                 end
             end
         end

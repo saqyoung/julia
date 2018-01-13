@@ -139,6 +139,16 @@ function repl_cmd(cmd, out)
     nothing
 end
 
+function ip_matches_func(ip, func::Symbol)
+    for fr in StackTraces.lookup(ip)
+        if fr === StackTraces.UNKNOWN || fr.from_c
+            return false
+        end
+        fr.func === func && return true
+    end
+    return false
+end
+
 function display_error(io::IO, er, bt)
     if !isempty(bt)
         st = stacktrace(bt)
@@ -148,8 +158,8 @@ function display_error(io::IO, er, bt)
     end
     print_with_color(Base.error_color(), io, "ERROR: "; bold = true)
     # remove REPL-related frames from interactive printing
-    eval_ind = findlast(addr->Base.REPL.ip_matches_func(addr, :eval), bt)
-    if eval_ind !== nothing
+    eval_ind = findlast(addr->ip_matches_func(addr, :eval), bt)
+    if eval_ind != nothing
         bt = bt[1:eval_ind-1]
     end
     showerror(IOContext(io, :limit => true), er, bt)
@@ -339,34 +349,12 @@ function load_juliarc()
     nothing
 end
 
-import .Terminals
-import .REPL
 
-const repl_hooks = []
-
-"""
-    atreplinit(f)
-
-Register a one-argument function to be called before the REPL interface is initialized in
-interactive sessions; this is useful to customize the interface. The argument of `f` is the
-REPL object. This function should be called from within the `.juliarc.jl` initialization
-file.
-"""
-atreplinit(f::Function) = (pushfirst!(repl_hooks, f); nothing)
-
-function __atreplinit(repl)
-    for f in repl_hooks
-        try
-            f(repl)
-        catch err
-            showerror(STDERR, err)
-            println(STDERR)
-        end
-    end
-end
-_atreplinit(repl) = invokelatest(__atreplinit, repl)
+# The REPL stdlib hooks into Base using this Ref
+const REPLREF = Ref{Module}()
 
 function _start()
+    repl_stdlib_loaded = isassigned(REPLREF)
     empty!(ARGS)
     append!(ARGS, Core.ARGS)
     opts = JLOptions()
@@ -384,22 +372,25 @@ function _start()
                 banner |= opts.banner != 0 && is_interactive
                 color_set || (global have_color = false)
             else
+                if !repl_stdlib_loaded
+                    error("REPLREF standard library not loaded")
+                end
                 term_env = get(ENV, "TERM", @static Sys.iswindows() ? "" : "dumb")
-                term = Terminals.TTYTerminal(term_env, STDIN, STDOUT, STDERR)
+                term = REPLREF[].Terminals.TTYTerminal(term_env, STDIN, STDOUT, STDERR)
                 global is_interactive = true
                 banner |= opts.banner != 0
-                color_set || (global have_color = Terminals.hascolor(term))
-                banner && REPL.banner(term,term)
+                color_set || (global have_color = REPLREF[].Terminals.hascolor(term))
+                banner && REPLREF[].banner(term,term)
                 if term.term_type == "dumb"
-                    active_repl = REPL.BasicREPL(term)
+                    active_repl = REPLREF[].BasicREPL(term)
                     quiet || @warn "Terminal not fully functional"
                 else
-                    active_repl = REPL.LineEditREPL(term, have_color, true)
+                    active_repl = REPLREF[].LineEditREPL(term, have_color, true)
                     active_repl.history_file = history_file
                 end
                 # Make sure any displays pushed in .juliarc.jl ends up above the
-                # REPLDisplay
-                pushdisplay(REPL.REPLDisplay(active_repl))
+                # REPLREFDisplay
+                pushdisplay(REPLREF[].REPLDisplay(active_repl))
             end
         else
             banner |= opts.banner != 0 && is_interactive
@@ -418,8 +409,11 @@ function _start()
                     end
                 end
             else
-                _atreplinit(active_repl)
-                REPL.run_repl(active_repl, backend->(global active_repl_backend = backend))
+                if !repl_stdlib_loaded
+                    error("REPLREF standard library not loaded")
+                end
+                REPLREF[]._atreplinit(active_repl)
+                REPLREF[].run_repl(active_repl, backend->(global active_repl_backend = backend))
             end
         end
     catch err

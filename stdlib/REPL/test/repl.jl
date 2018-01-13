@@ -1,13 +1,19 @@
 # This file is a part of Julia. License is MIT: https://julialang.org/license
+using Test
+using REPL
+import REPL.LineEdit
+
+const BASE_TEST_PATH = joinpath(@__DIR__, "..", "..", "..", "test")
+isdefined(Main, :TestHelpers) || @eval Main include(joinpath($(BASE_TEST_PATH), "TestHelpers.jl"))
+import Main.TestHelpers
 
 # For curmod_*
-include("testenv.jl")
+include(joinpath(BASE_TEST_PATH, "testenv.jl"))
+
+include("FakeTerminals.jl")
+import .FakeTerminals.FakeTerminal
 
 # REPL tests
-isdefined(Main, :TestHelpers) || @eval Main include(joinpath(dirname(@__FILE__), "TestHelpers.jl"))
-using Main.TestHelpers
-import Base: REPL, LineEdit
-
 function fake_repl(f; options::REPL.Options=REPL.Options(confirm_exit=false))
     # Use pipes so we can easily do blocking reads
     # In the future if we want we can add a test that the right object
@@ -19,7 +25,7 @@ function fake_repl(f; options::REPL.Options=REPL.Options(confirm_exit=false))
     Base.link_pipe(stdout, julia_only_read=true, julia_only_write=true)
     Base.link_pipe(stderr, julia_only_read=true, julia_only_write=true)
 
-    repl = Base.REPL.LineEditREPL(TestHelpers.FakeTerminal(stdin.out, stdout.in, stderr.in), true)
+    repl = REPL.LineEditREPL(FakeTerminal(stdin.out, stdout.in, stderr.in), true)
     repl.options = options
 
     f(stdin.in, stdout.out, repl)
@@ -43,11 +49,11 @@ ccall(:jl_exit_on_sigint, Cvoid, (Cint,), 0)
 # this should make sure nothing crashes without depending on how exactly the control
 # characters are being used.
 fake_repl() do stdin_write, stdout_read, repl
-    repl.specialdisplay = Base.REPL.REPLDisplay(repl)
+    repl.specialdisplay = REPL.REPLDisplay(repl)
     repl.history_file = false
 
     repltask = @async begin
-        Base.REPL.run_repl(repl)
+        REPL.run_repl(repl)
     end
 
     global inc = false
@@ -69,7 +75,7 @@ fake_repl() do stdin_write, stdout_read, repl
     write(stdin_write, '\x03')
     # Test basic completion in main mode
     write(stdin_write, "Base.REP\t")
-    readuntil(stdout_read, "Base.REPL")
+    readuntil(stdout_read, "REPL")
     write(stdin_write, '\x03')
     write(stdin_write, "\\alpha\t")
     readuntil(stdout_read,"α")
@@ -321,7 +327,7 @@ for prompt = ["TestΠ", () -> randstring(rand(1:10))]
     fake_repl() do stdin_write, stdout_read, repl
         # In the future if we want we can add a test that the right object
         # gets displayed by intercepting the display
-        repl.specialdisplay = Base.REPL.REPLDisplay(repl)
+        repl.specialdisplay = REPL.REPLDisplay(repl)
 
         repl.interface = REPL.setup_interface(repl)
         repl_mode = repl.interface.modes[1]
@@ -543,7 +549,7 @@ fake_repl() do stdin_write, stdout_read, repl
     help_mode = repl.interface.modes[3]
 
     repltask = @async begin
-        Base.REPL.run_repl(repl)
+        REPL.run_repl(repl)
     end
 
     global c = Condition()
@@ -628,7 +634,7 @@ fake_repl() do stdin_write, stdout_read, repl
         return notify(c,line)
     end
 
-    repltask = @async Base.REPL.run_interface(repl.t, LineEdit.ModalInterface([panel,search_prompt]))
+    repltask = @async REPL.run_interface(repl.t, LineEdit.ModalInterface([panel,search_prompt]))
 
     write(stdin_write,"a\n")
     @test wait(c) == "a"
@@ -697,19 +703,19 @@ end
 fake_repl() do stdin_write, stdout_read, repl
     # Relies on implementation detail to make sure we only have the single
     # replinit callback we want to test.
-    saved_replinit = copy(Base.repl_hooks)
+    saved_replinit = copy(REPL.repl_hooks)
     slot = Ref(false)
     # Create a closure from a newer world to check if `_atreplinit`
     # can run it correctly
-    atreplinit(@eval(repl::Base.REPL.LineEditREPL -> ($slot[] = true)))
-    Base._atreplinit(repl)
+    atreplinit(@eval(repl::REPL.LineEditREPL -> ($slot[] = true)))
+    REPL._atreplinit(repl)
     @test slot[]
-    @test_throws MethodError Base.repl_hooks[1](repl)
-    copyto!(Base.repl_hooks, saved_replinit)
+    @test_throws MethodError REPL.repl_hooks[1](repl)
+    copyto!(REPL.repl_hooks, saved_replinit)
     nothing
 end
 
-let ends_with_semicolon = Base.REPL.ends_with_semicolon
+let ends_with_semicolon = REPL.ends_with_semicolon
     @test !ends_with_semicolon("")
     @test ends_with_semicolon(";")
     @test !ends_with_semicolon("a")
@@ -725,8 +731,8 @@ let ends_with_semicolon = Base.REPL.ends_with_semicolon
 end
 
 # PR #20794, TTYTerminal with other kinds of streams
-let term = Base.Terminals.TTYTerminal("dumb",IOBuffer("1+2\n"),IOContext(IOBuffer(),:foo=>true),IOBuffer())
-    r = Base.REPL.BasicREPL(term)
+let term = REPL.Terminals.TTYTerminal("dumb",IOBuffer("1+2\n"),IOContext(IOBuffer(),:foo=>true),IOBuffer())
+    r = REPL.BasicREPL(term)
     REPL.run_repl(r)
     @test String(take!(term.out_stream.io)) == "julia> 3\n\njulia> \n"
     @test haskey(term, :foo) == true
@@ -741,7 +747,8 @@ end
 
 # a small module for alternative keymap tests
 module AltLE
-import Base: LineEdit, REPL
+import REPL
+import REPL.LineEdit
 
 function history_move_prefix(s::LineEdit.MIState,
                              hist::REPL.REPLHistoryProvider,
@@ -790,7 +797,7 @@ for keys = [altkeys, merge(altkeys...)],
     histfile = tempname()
     try
         fake_repl() do stdin_write, stdout_read, repl
-            repl.specialdisplay = Base.REPL.REPLDisplay(repl)
+            repl.specialdisplay = REPL.REPLDisplay(repl)
             repl.history_file = true
             withenv("JULIA_HISTORY" => histfile) do
                 repl.interface = REPL.setup_interface(repl, extra_repl_keymap = altkeys)
@@ -798,7 +805,7 @@ for keys = [altkeys, merge(altkeys...)],
             repl.interface.modes[1].prompt = altprompt
 
             repltask = @async begin
-                Base.REPL.run_repl(repl)
+                REPL.run_repl(repl)
             end
 
             sendrepl3(cmd) = write(stdin_write,"$cmd\n")
@@ -848,11 +855,11 @@ end
 
 # Test that module prefix is omitted when type is reachable from Main (PR #23806)
 fake_repl() do stdin_write, stdout_read, repl
-    repl.specialdisplay = Base.REPL.REPLDisplay(repl)
+    repl.specialdisplay = REPL.REPLDisplay(repl)
     repl.history_file = false
 
     repltask = @async begin
-        Base.REPL.run_repl(repl)
+        REPL.run_repl(repl)
     end
 
     @eval Main module TestShowTypeREPL; export TypeA; struct TypeA end; end

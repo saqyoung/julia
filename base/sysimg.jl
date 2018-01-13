@@ -452,12 +452,6 @@ include("asyncmap.jl")
 include("multimedia.jl")
 using .Multimedia
 
-# frontend
-include("repl/Terminals.jl")
-include("repl/LineEdit.jl")
-include("repl/REPLCompletions.jl")
-include("repl/REPL.jl")
-
 # deprecated functions
 include("deprecated.jl")
 
@@ -508,6 +502,7 @@ Base.require(:Distributed)
 Base.require(:Printf)
 Base.require(:Future)
 Base.require(:Libdl)
+Base.require(:REPL)
 
 @eval Base begin
     @deprecate_binding Test root_module(:Test) true ", run `using Test` instead"
@@ -528,6 +523,9 @@ Base.require(:Libdl)
         ", run `using SparseArrays` to load sparse array functionality")
     @deprecate_binding(SparseVector, root_module(:SparseArrays).SparseVector, true,
         ", run `using SparseArrays` to load sparse array functionality")
+
+    @deprecate_binding REPL root_module(:REPL) true ", run `using REPL` instead"
+    @deprecate_binding atreplinit root_module(:REPL).atreplinit true ", it has been moved to the REPL standard library, run `using REPL´ to load it"
 end
 
 empty!(LOAD_PATH)
