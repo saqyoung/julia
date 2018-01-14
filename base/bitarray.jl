@@ -578,7 +578,7 @@ function gen_bitarray_from_itr(itr)
             cind += bitcache_chunks
             ind = 1
         end
-        y = iterate(x, st)
+        y = iterate(itr, st)
     end
     if ind > 1
         @inbounds C[ind:bitcache_size] = false

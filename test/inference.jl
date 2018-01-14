@@ -206,10 +206,9 @@ end
     :(for i in 1
       end)
 end
-let
-    ast12474 = code_typed(f12474, Tuple{Float64})
-    @test isleaftype(ast12474[1][2])
-    @test all(isleaftype, ast12474[1][1].slottypes)
+let ast12474 = code_typed(f12474, Tuple{Float64})
+    @test isconcrete(ast12474[1][2])
+    @test all(x->isconcrete(Core.Inference.typesubtract(x, Nothing)), ast12474[1][1].slottypes)
 end
 
 
