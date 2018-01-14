@@ -56,7 +56,7 @@ eltype(::Type{ValueIterator{D}}) where {D} = _tt2(eltype(D))
 
 function iterate(v::Union{KeySet,ValueIterator}, state...)
     y = iterate(v.dict, state...)
-    y == nothing && return nothing
+    y === nothing && return nothing
     y[1][isa(v, KeySet) ? 1 : 2], y[2]
 end
 

@@ -957,7 +957,7 @@ end
 function deleteat!(B::BitVector, inds)
     n = new_l = length(B)
     y = iterate(inds)
-    y == nothing && return B
+    y === nothing && return B
 
     Bc = B.chunks
 

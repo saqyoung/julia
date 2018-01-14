@@ -211,14 +211,14 @@ via `print(io::IOBuffer, x)`. `strings` will be printed to `io`.
 """
 function join(io::IO, strings, delim, last)
     y = iterate(strings)
-    y == nothing && return
+    y === nothing && return
     str, i = y
     print(io, str)
     y = iterate(strings, i)
     while y !== nothing
         str, i = y
         y = iterate(strings, i)
-        print(io, y == nothing ? last : delim)
+        print(io, y === nothing ? last : delim)
         print(io, str)
     end
 end

@@ -1364,7 +1364,7 @@ function detect_unbound_args(mods...;
                             params = tuple_sig.parameters[1:(end - 1)]
                             tuple_sig = Base.rewrap_unionall(Tuple{params...}, m.sig)
                             mf = ccall(:jl_gf_invoke_lookup, Any, (Any, UInt), tuple_sig, typemax(UInt))
-                            if mf != nothing && mf.func !== m && mf.func.sig <: tuple_sig
+                            if mf !== nothing && mf.func !== m && mf.func.sig <: tuple_sig
                                 continue
                             end
                         end

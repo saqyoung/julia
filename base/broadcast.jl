@@ -494,7 +494,7 @@ end
         @nexprs $nargs i->(Idefault_i = Idefaults[i])
         while true
             x = iterate(iter, st)
-            x == nothing && break
+            x === nothing && break
             I, st = x
             # reverse-broadcast the indices
             @nexprs $nargs i->(I_i = newindex(I, keep_i, Idefault_i))

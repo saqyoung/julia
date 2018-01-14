@@ -341,7 +341,7 @@ function iterate(itr::AsyncCollector, state::AsyncCollectorState)
     y = isdefined(state, :enum_state) ?
         iterate(itr.enumerator, state.enum_state) :
         iterate(itr.enumerator)
-    if y == nothing
+    if y === nothing
         wait_done(itr, state)
         return nothing
     end
@@ -387,7 +387,7 @@ function iterate(itr::AsyncGenerator, state::AsyncGeneratorState=AsyncGeneratorS
         y = isdefined(state, :collector_state) ?
             iterate(itr.collector, state.collector_state) :
             iterate(itr.collector)
-        if y == nothing
+        if y === nothing
             # `check_done` waits for async tasks to finish. if we do not have the index
             # we are looking for, it is an error.
             state.collector_done = true

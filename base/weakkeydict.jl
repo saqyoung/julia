@@ -118,7 +118,7 @@ end
 function iterate(t::WeakKeyDict{K,V}, state) where V where K
     gc_token = first(state)
     y = iterate(t.ht, tail(state)...)
-    y == nothing && return nothing
+    y === nothing && return nothing
     wkv, i = y
     kv = Pair{K,V}(wkv[1].value::K, wkv[2])
     return (kv, (gc_token, i))

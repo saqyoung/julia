@@ -178,7 +178,7 @@ julia> m.captures
 julia> m.match
 "aba"
 
-julia> match(rx, "cabac", 3) == nothing
+julia> match(rx, "cabac", 3) === nothing
 true
 ```
 """

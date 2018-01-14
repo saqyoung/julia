@@ -57,12 +57,12 @@ indexed_iterate(t::Tuple, i::Int, state=1) = (@_inline_meta; (t[i], i+1))
 indexed_iterate(a::Array, i::Int, state=1) = (@_inline_meta; (a[i], i+1))
 function indexed_iterate(I, i)
     x = iterate(I)
-    x == nothing && throw(BoundsError(I, i))
+    x === nothing && throw(BoundsError(I, i))
     x
 end
 function indexed_iterate(I, i, state)
     x = iterate(I, state)
-    x == nothing && throw(BoundsError(I, i))
+    x === nothing && throw(BoundsError(I, i))
     x
 end
 

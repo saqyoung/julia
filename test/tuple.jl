@@ -152,7 +152,7 @@ end
 end
 
 @testset "iterating" begin
-    @test iterate(()) == nothing
+    @test iterate(()) === nothing
     t = (1,2,3)
     y1 = iterate(t)
     y2 = iterate(t, y1[2])

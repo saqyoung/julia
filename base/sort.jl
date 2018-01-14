@@ -48,7 +48,7 @@ export # not exported by Base
 
 function issorted(itr, order::Ordering)
     y = iterate(itr)
-    y == nothing && return true
+    y === nothing && return true
     prev, state = y
     y = iterate(itr, state)
     while y !== nothing

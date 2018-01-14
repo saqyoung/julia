@@ -258,9 +258,9 @@ function cmp(a::AbstractString, b::AbstractString)
     ay = iterate(a)
     by = iterate(b)
     while true
-        (ay == nothing && by == nothing) && return 0
-        ay == nothing && return -1
-        by == nothing && return 1
+        (ay === nothing && by === nothing) && return 0
+        ay === nothing && return -1
+        by === nothing && return 1
         c, d = ay[1], by[1]
         c ≠ d && return ifelse(c < d, -1, 1)
         ay = iterate(a, ay[2])

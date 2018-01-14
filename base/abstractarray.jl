@@ -595,7 +595,7 @@ function copyto!(dest::AbstractArray, src)
     destiter = eachindex(dest)
     y = iterate(destiter)
     for x in src
-        y == nothing &&
+        y === nothing &&
             throw(ArgumentError(string("source has fewer elements than required")))
         dest[y[1]] = x
         y = iterate(destiter, y[2])
@@ -619,13 +619,13 @@ function copyto!(dest::AbstractArray, dstart::Integer, src, sstart::Integer)
     end
     y = iterate(src)
     for j = 1:(sstart-1)
-        if y == nothing
+        if y === nothing
             throw(ArgumentError(string("source has fewer elements than required, ",
                                        "expected at least ",sstart,", got ",j-1)))
         end
         y = iterate(src, y[2])
     end
-    if y == nothing
+    if y === nothing
         throw(ArgumentError(string("source has fewer elements than required, ",
                                       "expected at least ",sstart,", got ",sstart-1)))
     end
@@ -651,7 +651,7 @@ function copyto!(dest::AbstractArray, dstart::Integer, src, sstart::Integer, n::
     end
     y = iterate(src)
     for j = 1:(sstart-1)
-        if y == nothing
+        if y === nothing
             throw(ArgumentError(string("source has fewer elements than required, ",
                                        "expected at least ",sstart,", got ",j-1)))
         end
@@ -1971,11 +1971,11 @@ function hash(a::AbstractArray{T}, h::UInt) where T
     h += hash(size(a))
 
     y1 = iterate(a)
-    y1 == nothing && return h
+    y1 === nothing && return h
     y2 = iterate(a, y1[2])
-    y2 == nothing && return hash(y1[1], h)
+    y2 === nothing && return hash(y1[1], h)
     y = iterate(a, y2[2])
-    y == nothing && return hash(y2[1], hash(y1[1], h))
+    y === nothing && return hash(y2[1], hash(y1[1], h))
     x1, x2 = y1[1], y2[1]
 
     # For the rest of the function, we keep three elements worth of state,
@@ -2015,7 +2015,7 @@ function hash(a::AbstractArray{T}, h::UInt) where T
             n > 1 && !isequal(step, laststep) && break
             n += 1
             laststep = step
-            if y == nothing
+            if y === nothing
                 # The array matches a range exactly
                 return hash(x2, hash(n, h))
             end
@@ -2053,7 +2053,7 @@ function hash(a::AbstractArray{T}, h::UInt) where T
             h = hash(runlength, h)
         end
         h = hash(x1, h)
-        y == nothing && break
+        y === nothing && break
         x1, x2 = x2, y[1]
         y = iterate(a, y[2])
     end
