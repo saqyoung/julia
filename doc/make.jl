@@ -1,9 +1,9 @@
 # Install dependencies needed to build the documentation.
 ENV["JULIA_PKGDIR"] = joinpath(@__DIR__, "deps")
-#Pkg.init()
-#cp(joinpath(@__DIR__, "REQUIRE"), Pkg.dir("REQUIRE"); remove_destination = true)
-#Pkg.update()
-#Pkg.resolve()
+Pkg.init()
+cp(joinpath(@__DIR__, "REQUIRE"), Pkg.dir("REQUIRE"); remove_destination = true)
+Pkg.update()
+Pkg.resolve()
 
 using Documenter
 
