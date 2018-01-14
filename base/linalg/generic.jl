@@ -285,7 +285,7 @@ diag(A::AbstractVector) = throw(ArgumentError("use diagm instead of diag to cons
 
 # special cases of vecnorm; note that they don't need to handle isempty(x)
 function generic_vecnormMinusInf(x)
-    (v, s) = iterate(x)
+    (v, s) = iterate(x)::Tuple
     minabs = norm(v)
     while true
         y = iterate(x, s)
@@ -298,7 +298,7 @@ function generic_vecnormMinusInf(x)
 end
 
 function generic_vecnormInf(x)
-    (v, s) = iterate(x)
+    (v, s) = iterate(x)::Tuple
     maxabs = norm(v)
     while true
         y = iterate(x, s)
@@ -311,7 +311,7 @@ function generic_vecnormInf(x)
 end
 
 function generic_vecnorm1(x)
-    (v, s) = iterate(x)
+    (v, s) = iterate(x)::Tuple
     av = float(norm(v))
     T = typeof(av)
     sum::promote_type(Float64, T) = av
@@ -332,7 +332,7 @@ norm_sqr(x::Union{T,Complex{T},Rational{T}}) where {T<:Integer} = abs2(float(x))
 function generic_vecnorm2(x)
     maxabs = vecnormInf(x)
     (maxabs == 0 || isinf(maxabs)) && return maxabs
-    (v, s) = iterate(x)
+    (v, s) = iterate(x)::Tuple
     T = typeof(maxabs)
     if isfinite(_length(x)*maxabs*maxabs) && maxabs*maxabs != 0 # Scaling not necessary
         sum::promote_type(Float64, T) = norm_sqr(v)
@@ -358,7 +358,7 @@ end
 # Compute L_p norm ‖x‖ₚ = sum(abs(x).^p)^(1/p)
 # (Not technically a "norm" for p < 1.)
 function generic_vecnormp(x, p)
-    (v, s) = iterate(x)
+    (v, s) = iterate(x)::Tuple
     if p > 1 || p < -1 # might need to rescale to avoid overflow
         maxabs = p > 1 ? vecnormInf(x) : vecnormMinusInf(x)
         (maxabs == 0 || isinf(maxabs)) && return maxabs
