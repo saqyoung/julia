@@ -2486,7 +2486,7 @@ function abstract_call(@nospecialize(f), fargs::Union{Tuple{},Vector{Any}}, argt
     tm = _topmod(sv)
     if isa(f, Builtin) || isa(f, IntrinsicFunction)
         rt = builtin_tfunction(f, argtypes[2:end], sv)
-        if rt === Bool && isa(fargs, Vector{Any})
+        if (rt === Bool || (isa(rt, Const) && isa(rt.val, Bool))) && isa(fargs, Vector{Any})
             # perform very limited back-propagation of type information for `is` and `isa`
             if f === isa
                 a = fargs[2]
@@ -2515,13 +2515,13 @@ function abstract_call(@nospecialize(f), fargs::Union{Tuple{},Vector{Any}}, argt
                     if isdefined(typeof(aty.val), :instance) # can only widen a if it is a singleton
                         return Conditional(b, aty, typesubtract(widenconst(bty), typeof(aty.val)))
                     end
-                    return Conditional(b, aty, bty)
+                    return isa(rt, Const) ? rt : Conditional(b, aty, bty)
                 end
                 if isa(bty, Const) && isa(a, fieldtype(Conditional, :var))
                     if isdefined(typeof(bty.val), :instance) # same for b
                         return Conditional(a, bty, typesubtract(widenconst(aty), typeof(bty.val)))
                     end
-                    return Conditional(a, bty, aty)
+                    return isa(rt, Const) ? rt : Conditional(a, bty, aty)
                 end
             elseif f === Core.Inference.not_int
                 aty = argtypes[2]
@@ -2932,6 +2932,14 @@ function issubconditional(a::Conditional, b::Conditional)
     return false
 end
 
+maybe_extract_const_bool(c::Const) = isa(c.val, Bool) ? c.val : nothing
+function maybe_extract_const_bool(c::Conditional)
+    (c.vtype === Bottom && !(c.elsetype === Bottom)) && return false
+    (c.elsetype === Bottom && !(c.vtype === Bottom)) && return true
+    nothing
+end
+maybe_extract_const_bool(c) = nothing
+
 function ⊑(@nospecialize(a), @nospecialize(b))
     (a === NF || b === Any) && return true
     (a === Any || b === NF) && return false
@@ -2940,6 +2948,8 @@ function ⊑(@nospecialize(a), @nospecialize(b))
     if isa(a, Conditional)
         if isa(b, Conditional)
             return issubconditional(a, b)
+        elseif isa(b, Const) && isa(b.val, Bool)
+            return maybe_extract_const_bool(a) === b.val
         end
         a = Bool
     elseif isa(b, Conditional)
@@ -3563,7 +3573,7 @@ function typeinf_work(frame::InferenceState)
                 hd = stmt.head
                 if hd === :gotoifnot
                     condt = abstract_eval(stmt.args[1], s[pc], frame)
-                    condval = isa(condt, Const) ? condt.val : nothing
+                    condval = maybe_extract_const_bool(condt)
                     l = stmt.args[2]::Int
                     changes = changes::VarTable
                     # constant conditions
