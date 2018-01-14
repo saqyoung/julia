@@ -1531,25 +1531,40 @@ end
 """
     findfirst(A)
 
-Return the linear index of the first `true` value in `A`.
+Return the index or key of the first `true` value in `A`.
 Return `nothing` if no such value is found.
 To search for other kinds of values, pass a predicate as the first argument.
 
+Indices or keys are of the same type as those returned by [`keys(A)`](@ref)
+and [`pairs(A)`](@ref) for `AbstractArray`, `AbstractDict`, `AbstractString`
+`Tuple` and `NamedTuple` objects, and are linear indices starting at `1`
+for other iterables.
+
 # Examples
 ```jldoctest
-julia> A = [false false; true false]
-2×2 Array{Bool,2}:
- false  false
-  true  false
+julia> A = [false, false, true, false]
+4-element Array{Bool,1}:
+ false
+ false
+  true
+ false
 
 julia> findfirst(A)
 2
 
 julia> findfirst(falses(3)) == nothing
 true
+
+julia> A = [false false; true false]
+2×2 Array{Bool,2}:
+ false  false
+  true  false
+
+julia> findfirst(A)
+CartesianIndex(1, 2)
 ```
 """
-findfirst(A) = findnext(A, 1)
+findfirst(A) = isempty(A) ? nothing : findnext(A, first(_keys(A)))
 
 """
     findnext(predicate::Function, A, i::Integer)
@@ -1586,15 +1601,17 @@ end
 """
     findfirst(predicate::Function, A)
 
-Return the linear index of the first element of `A` for which `predicate` returns `true`.
+Return the index or key of the first element of `A` for which `predicate` returns `true`.
 Return `nothing` if there is no such element.
 
 # Examples
 ```jldoctest
-julia> A = [1 4; 2 2]
-2×2 Array{Int64,2}:
- 1  4
- 2  2
+julia> A = [1, 4, 2, 2]
+4-element Array{Int64,1}:
+ 1
+ 4
+ 2
+ 2
 
 julia> findfirst(iseven, A)
 2
@@ -1604,9 +1621,17 @@ true
 
 julia> findfirst(equalto(4), A)
 3
+
+julia> A = [1 4; 2 2]
+2×2 Array{Int64,2}:
+ 1  4
+ 2  2
+
+julia> findfirst(iseven, A)
+CartesianIndex(1, 2)
 ```
 """
-findfirst(testf::Function, A) = findnext(testf, A, 1)
+findfirst(testf::Function, A) = isempty(A) ? nothing : findnext(testf, A, first(_keys(A)))
 
 """
     findprev(A, i::Integer)
@@ -1645,15 +1670,22 @@ end
 """
     findlast(A)
 
-Return the linear index of the last `true` value in `A`.
+Return the index or key of the last `true` value in `A`.
 Return `nothing` if there is no `true` value in `A`.
+
+Indices or keys are of the same type as those returned by [`keys(A)`](@ref)
+and [`pairs(A)`](@ref) for `AbstractArray`, `AbstractDict`, `AbstractString`
+`Tuple` and `NamedTuple` objects, and are linear indices starting at `1`
+for other iterables.
 
 # Examples
 ```jldoctest
-julia> A = [true false; true false]
-2×2 Array{Bool,2}:
- true  false
- true  false
+julia> A = [false, false, true, false]
+4-element Array{Bool,1}:
+ false
+ false
+  true
+ false
 
 julia> findlast(A)
 2
@@ -1662,9 +1694,17 @@ julia> A = falses(2,2);
 
 julia> findlast(A) == nothing
 true
+
+julia> A = [true false; true false]
+2×2 Array{Bool,2}:
+ true  false
+ true  false
+
+julia> findlast(A)
+CartesianIndex(1, 2)
 ```
 """
-findlast(A) = findprev(A, endof(A))
+findlast(A) = isempty(A) ? nothing : findprev(A, last(_keys(A)))
 
 """
     findprev(predicate::Function, A, i::Integer)
@@ -1698,24 +1738,39 @@ end
 """
     findlast(predicate::Function, A)
 
-Return the linear index of the last element of `A` for which `predicate` returns `true`.
+Return the index or key of the last element of `A` for which `predicate` returns `true`.
 Return `nothing` if there is no such element.
+
+Indices or keys are of the same type as those returned by [`keys(A)`](@ref)
+and [`pairs(A)`](@ref) for `AbstractArray`, `AbstractDict`, `AbstractString`
+`Tuple` and `NamedTuple` objects, and are linear indices starting at `1`
+for other iterables.
 
 # Examples
 ```jldoctest
-julia> A = [1 2; 3 4]
-2×2 Array{Int64,2}:
- 1  2
- 3  4
+julia> A = [1, 2, 3, 4]
+4-element Array{Int64,1}:
+ 1
+ 2
+ 3
+ 4
 
 julia> findlast(isodd, A)
 2
 
 julia> findlast(x -> x > 5, A) == nothing
 true
+
+julia> A = [1 2; 3 4]
+2×2 Array{Int64,2}:
+ 1  2
+ 3  4
+
+julia> findlast(isodd, A)
+CartesianIndex(1, 2)
 ```
 """
-findlast(testf::Function, A) = findprev(testf, A, endof(A))
+findlast(testf::Function, A) = isempty(A) ? nothing : findprev(testf, A, last(_keys(A)))
 
 """
     find(f::Function, A)
@@ -1770,10 +1825,10 @@ julia> find(x -> x >= 0, d)
 
 ```
 """
-find(testf::Function, A) = collect(first(p) for p in _pairs(A) if testf(last(p)))
+find(testf::Function, A) = collect(first(p) for p in zip(_keys(A), A) if testf(last(p)))
 
-_pairs(A::Union{AbstractArray, AbstractDict, AbstractString, Tuple, NamedTuple}) = pairs(A)
-_pairs(iter) = zip(OneTo(typemax(Int)), iter)  # safe for objects that don't implement length
+_keys(iter) = OneTo(typemax(Int)) # safe for objects that don't implement length
+_keys(A::Union{AbstractArray, AbstractDict, AbstractString, Tuple, NamedTuple}) = keys(A)
 
 """
     find(A)
@@ -1801,7 +1856,7 @@ function find(A)
     if !(eltype(A) === Bool) && !all(x -> x isa Bool, A)
         depwarn("In the future `find(A)` will only work on boolean collections. Use `find(x->x!=0, A)` instead.", :find)
     end
-    collect(first(p) for p in _pairs(A) if last(p) != 0)
+    collect(first(p) for p in zip(_keys(A), A) if last(p) != 0)
 end
 
 find(x::Bool) = x ? [1] : Vector{Int}()
